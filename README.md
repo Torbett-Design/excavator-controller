@@ -14,7 +14,7 @@ This repo holds the firmware for the ESP32-based contoller for the ProfessorBoot
 Here is the IO map of the ESP32 pins:
 
 | IO Pin   |  Function   |  Description  |
-----------------------------------------
+|----------|-------------|---------------|
 | IO 2     |  BATT_STAT  | Low = battery trickle charing. Might not be useful. |
 | IO 5     |  BEACON     | Data for WS2812 style RGB LED for beacon |
 | IO 12    |  VBATT_ADC_EN | Set pin HIGH and wait 10mS to take ADC reading. Then set low. |
@@ -33,7 +33,7 @@ Here is the IO map of the ESP32 pins:
 | IO 18    | BOOM LED | Boom LEDs, high = on |
 | IO 22    | 5V EN    | Enables the 5V regulator for servos, LEDs and audio |
 | IO 23    | MOTORS EN | High = enable all motors, low = disable all motors |
-----------------------------------------------------------------------------
+
 
 Serial 0 on the ESP32 is mapped to the USB-C port, with an auto-reset and bootloader circuit compatible with Arduino / PlatformIO.
 
@@ -42,7 +42,7 @@ Serial 0 on the ESP32 is mapped to the USB-C port, with an auto-reset and bootlo
 The motors are all connected to a PCA9635 16-channel PWM driver. Each motor has 2 inputs, and are used thus:
 
 | Motor A | Motor B | Result   |
--------------------------------
+|----------|---------|------------|
 | 0 | 0 | Motor off, free running |
 | 0 | PWM | Motor clockwise, PWM = speed |
 | PWM | 0 | Motor counter-clockwise, PWM = speed |
@@ -56,7 +56,7 @@ The i2c address is set to 0x00 which is an all-call address. I will have to modi
 The channels are mapped as follows:
 
 | LEDx output  | Motor channel |
---------------------------------
+|--------------|---------------|
 | 0  | 1A |
 | 1  | 1B | 
 | 2  | 2A |
