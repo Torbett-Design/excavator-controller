@@ -75,7 +75,20 @@ The channels are mapped as follows:
 | 15 | 8B |
 ----------
 
-Motor physical function assignments to follow.
+The motors are mapped as follows:
+
+| Motor | Physical Function |
+|-------|----------------------|
+| 1     | Boom |
+| 2     | Dipper |
+| 3     | Bucket |
+| 4     | Thumb |
+| 5     | Rotator |
+| 6     | Left Track | 
+| 7     | Right Track |
+| 8     | Pusher |
+
+
 
 ## Audio
 
