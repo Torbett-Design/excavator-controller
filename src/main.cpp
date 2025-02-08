@@ -1,5 +1,3 @@
-#define AUDIO_NO_SD_FS
-
 #include <Arduino.h>
 #include <PCA9635.h>
 #include <Wire.h>
@@ -8,14 +6,9 @@
 #include <Adafruit_NeoPixel.h>
 #include <mutex>
 #include <queue>
-#include <WiFi.h>
-#include <WiFiClientSecure.h>
-#include <SPI.h>
-#include <SD.h>
-#include <SD_MMC.h>
-#include <SPIFFS.h>
-#include <FS.h>
-#include <FFat.h>
+#include <Ps3Controller.h>
+
+#define PS3_CONTROLLER_MAC "01:02:03:04:05:06"
 
 // PCA9635 instance
 PCA9635 motorDriver(0x00);
@@ -97,6 +90,11 @@ QueueHandle_t audioQueue;
 TaskHandle_t audioTaskHandle;
 volatile bool audioStopRequest = false;
 
+/* 
+  Audio Task 
+  This task handles audio playback from SPIFFS.
+  @brief Plays audio files from SPIFFS using I2S.
+*/
 void audioTask(void* parameter) {
     AudioCommand cmd;
     
@@ -133,6 +131,11 @@ void audioTask(void* parameter) {
     }
 }
 
+/*
+  Setup I2S
+  @brief Configures I2S for audio playback.
+
+*/
 void setupI2S() {
   i2s_config_t i2s_config = {
       .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
@@ -478,6 +481,16 @@ for (int i = 0; i < 16; i++) {
 }
 }
 
+void ps3_notify()
+{
+  // add routines to get data from the controller
+}
+
+void setupController()
+{
+  Ps3.attach(ps3_notify);
+  Ps3.begin(PS3_CONTROLLER_MAC);
+}
 
 
 void setup() {
