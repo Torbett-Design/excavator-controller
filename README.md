@@ -31,26 +31,6 @@ Advanced ESP32-based RC Excavator Controller with integrated audio, lighting, an
 | IO 22    | 5V EN    | Enables the 5V regulator for servos, LEDs and audio |
 | IO 23    | MOTORS EN | High = enable all motors, low = disable all motors |
 
-## Motor Control System
-The PCA9635 provides 16 PWM channels mapped as 8 dual-channel motor drivers.
-
-### Motor Functions
-
-// Set motor speed from -255 (full reverse) to 255 (full forward)
-setBoom(int16_t speed);      // Control main boom
-setDipper(int16_t speed);    // Control dipper arm
-setBucket(int16_t speed);    // Control bucket
-setThumb(int16_t speed);     // Control thumb grab
-setRotator(int16_t speed);   // Control cab rotation
-setLeftTrack(int16_t speed); // Control left track
-setRightTrack(int16_t speed);// Control right track
-setPusher(int16_t speed);    // Control auxiliary pusher
-
-// Example usage:
-setBoom(255);      // Full up
-setBucket(-128);   // Half speed down
-setRotator(0);     // Stop rotation
-
 
 Serial 0 on the ESP32 is mapped to the USB-C port, with an auto-reset and bootloader circuit compatible with Arduino / PlatformIO.
 
@@ -124,11 +104,13 @@ WAV files can be stored on the ESP32's internal flash and played. I suggest we g
 
 ## Display
 
-Because there was plenty of space on the board, and because it's useful for debugging, I added a small OLED display. [Datasheet](https://www.lcsc.com/datasheet/lcsc_datasheet_2410121827_HS-HS13L03W2C01_C7465997.pdf). Its on the I2C bus and might be at address 0x3C. ~~ I will have to double check because the datasheet seems to have confused I2C with SPI.~~ The display will not be fitted as it is SPI and not I2C.
+Because there was plenty of space on the board, and because it's useful for debugging, I added a small OLED display. [Datasheet](https://www.lcsc.com/datasheet/lcsc_datasheet_2410121827_HS-HS13L03W2C01_C7465997.pdf). Its on the I2C bus and might be at address 0x3C. ~~I will have to double check because the datasheet seems to have confused I2C with SPI.~~ The display will not be fitted as it is SPI and not I2C.
 
 ## Usage Examples
 
 ### Initializing the System
+
+```c++
 
 void setup() {
     setupMotors();
@@ -158,8 +140,35 @@ void loop() {
     // Continue with operation sequence...
 }
 
+```
+
+## Motor Control System
+The PCA9635 provides 16 PWM channels mapped as 8 dual-channel motor drivers.
+
+### Motor Functions
+
+```c++
+
+// Set motor speed from -255 (full reverse) to 255 (full forward)
+setBoom(int16_t speed);      // Control main boom
+setDipper(int16_t speed);    // Control dipper arm
+setBucket(int16_t speed);    // Control bucket
+setThumb(int16_t speed);     // Control thumb grab
+setRotator(int16_t speed);   // Control cab rotation
+setLeftTrack(int16_t speed); // Control left track
+setRightTrack(int16_t speed);// Control right track
+setPusher(int16_t speed);    // Control auxiliary pusher
+
+// Example usage:
+setBoom(255);      // Full up
+setBucket(-128);   // Half speed down
+setRotator(0);     // Stop rotation
+
+```
 
 ### Controlling Motors
+
+```c++
 
 void setMotor(uint8_t motor, int16_t speed) {
     uint8_t channelA = motor * 2 - 2;
@@ -184,8 +193,11 @@ void setPWM(uint8_t channel, uint8_t value) {
     Wire.endTransmission();
 }
 
+```
 
 ### Reading Battery Level
+
+```c++
 
 uint16_t readBatteryVoltage() {
     digitalWrite(IO_VBATT_ADC_EN, HIGH);
@@ -196,29 +208,18 @@ uint16_t readBatteryVoltage() {
     return (uint16_t)((adcValue / 4095.0) * 3300 * 2.625);
 }
 
+```
 
 ### Playing Audio
+
+```c++
 
 void playAudio(const uint8_t* wavData, size_t wavSize) {
     size_t bytesWritten;
     i2s_write(I2S_NUM_0, wavData, wavSize, &bytesWritten, portMAX_DELAY);
 }
 
-
-### Updating Display
-
-void updateDisplay(float batteryVoltage, int motorSpeed) {
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0,0);
-    display.print("Battery: ");
-    display.print(batteryVoltage);
-    display.println("V");
-    display.print("Motor Speed: ");
-    display.println(motorSpeed);
-    display.display();
-}
+```
 
 
 These examples demonstrate how to initialize the system, control motors, read battery levels, play audio, and update the display. For full functionality, you would combine these in your main loop and add additional logic for specific excavator operations.
@@ -227,7 +228,8 @@ These examples demonstrate how to initialize the system, control motors, read ba
 WS2812 RGB LED beacon with multiple modes.
 
 ## Beacon Functions
-```
+```c++
+
 setBeacon(bool enabled);  // Enable/disable beacon
 // Automatically switches between:
 // - Normal: Orange flashing at 80ms
@@ -236,12 +238,16 @@ setBeacon(bool enabled);  // Enable/disable beacon
 // Example usage:
 setBeacon(true);   // Enable beacon
 setBeacon(false);  // Disable beacon
+
 ```
+
 ## Audio System
 I2S-based audio playback system with DMA support and asynchronous operation.
 
 ## Audio Functions
-```
+
+```c++
+
 startEngine();      // Start sequence: start.wav → idle.wav (loop)
 enginePowerUp();    // Power up sequence: powerup.wav → power.wav (loop)
 engineHydraulic();  // Hydraulic loop: hydraulic.wav (loop)
@@ -256,6 +262,7 @@ stopAudio();
 startEngine();  // Start the engine
 delay(5000);    // Run for 5 seconds
 enginePowerUp(); // Increase power
+
 ```
 
 ## Lighting System
@@ -264,7 +271,7 @@ PWM-controlled LED outputs for cab, boom, and auxiliary lighting.
 
 ## Light Functions
 
-```
+```c++
 setCabLight(uint8_t brightness);    // 0-255 brightness
 setBoomLight(uint8_t brightness);   // 0-255 brightness
 setAuxLight(uint8_t brightness);    // 0-255 brightness
@@ -275,6 +282,7 @@ allLightsOff();                     // Turn off all lights
 setCabLight(255);    // Full brightness
 setBoomLight(128);   // Half brightness
 allLightsOn(64);     // All lights at quarter brightness
+
 ```
 
 ## Battery Monitoring
@@ -286,7 +294,7 @@ Automatic voltage monitoring with low battery warnings.
 * Triggers audio warning and red beacon when low
 * Voltage divider ratio: 2.625
 
-```
+```c++
 uint16_t voltage = readBatteryVoltage();  // Returns millivolts
 ```
 
@@ -317,7 +325,8 @@ The system uses FreeRTOS tasks for:
 
 ## Example Implementation
 
-```
+```c++
+
 void setup() {
     setupMotors();
     setupAudio();
@@ -345,7 +354,9 @@ void loop() {
     
     // Continue with operation sequence...
 }
+
 ```
+
 ## Build Requirements
 
 * Platform: ESP32
