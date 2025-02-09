@@ -4,6 +4,8 @@
 
 #define BEACON_LED_COUNT 1
 
+#define BEACON_TASK_STACK_SIZE 2048
+
 // Orange construction beacon color
 #define BEACON_COLOR beacon.Color(255, 140, 0)
 #define BEACON_FLASH_INTERVAL 80  // Flash rate in ms
@@ -16,11 +18,41 @@ namespace Beacon {
     static bool beaconState = false;
     static unsigned long lastBeaconUpdate = 0;
     static bool lowBatteryMode = false;
+    // Add to beacon.cpp
+
+    static TaskHandle_t beaconTaskHandle = NULL;
+
+    static void beaconTask(void* parameter) {
+    while(true) {
+        update();
+        vTaskDelay(pdMS_TO_TICKS(10)); // 10ms yield
+    }
+    }
+
+void startTask() {
+    xTaskCreate(
+        beaconTask,
+        "beacon_task",
+        BEACON_TASK_STACK_SIZE,
+        NULL,
+        1,
+        &beaconTaskHandle
+    );
+}
 
     void setup() {
         beacon.begin();
         beacon.clear();
         beacon.show();
+        
+        xTaskCreate(
+            beaconTask,
+            "beacon_task",
+            BEACON_TASK_STACK_SIZE,
+            NULL,
+            1,
+            &beaconTaskHandle
+        );
     }
 
     void setEnabled(bool enabled) {
@@ -59,3 +91,5 @@ namespace Beacon {
         }
     }
 }
+
+

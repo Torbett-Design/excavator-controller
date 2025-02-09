@@ -7,4 +7,5 @@ namespace Beacon {
     void setEnabled(bool enabled);
     void update();
     void setLowBatteryMode(bool enabled);
+    void startTask();
 }

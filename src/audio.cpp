@@ -16,30 +16,11 @@ namespace Audio
 #define AUDIO_QUEUE_SIZE 10
 #define AUDIO_TASK_STACK 4096
 
-    // Audio file paths
-    static const char *SOUND_START = "/start.wav";
-    static const char *SOUND_IDLE = "/idle.wav";
-    static const char *SOUND_POWERUP = "/powerup.wav";
-    static const char *SOUND_POWER = "/power.wav";
-    static const char *SOUND_HYDRAULIC = "/hydraulic.wav";
-    static const char *SOUND_POWERDOWN = "/powerdown.wav";
-    static const char *SOUND_STOP = "/stop.wav";
-    static const char *SOUND_LOW_BATTERY = "/low-batt.wav";
-    static const char *SOUND_TRACK = "/track.wav";
-    static const char *SOUND_REVERSE_BEEP = "/reverse.wav";
     // Thread safety
     static std::mutex audioMutex;
     static QueueHandle_t audioQueue;
     static TaskHandle_t audioTaskHandle;
     static volatile bool audioStopRequest = false;
-
-    // Define playback behavior
-    enum class PlaybackMode
-    {
-        QUEUE,   // Play after current sound finishes
-        REPLACE, // Stop current sound and play new sound
-        MIX      // Mix with currently playing sound(s)
-    };
 
     struct AudioCommand
     {
@@ -228,7 +209,7 @@ namespace Audio
         pendingQueue = xQueueCreate(PENDING_QUEUE_SIZE, sizeof(AudioCommand));
         xTaskCreate(audioTask, "AudioPlayer", AUDIO_TASK_STACK, NULL, 1, &audioTaskHandle);
     }
-    void playWAVAsync(const char *filename, bool loop = false, PlaybackMode mode = PlaybackMode::REPLACE, uint8_t volume = 255)
+    void playWAVAsync(const char *filename, bool loop, PlaybackMode mode, uint8_t volume)
     {
         AudioCommand cmd = {filename, loop, mode, volume};
         xQueueSend(audioQueue, &cmd, portMAX_DELAY);
@@ -266,6 +247,11 @@ namespace Audio
         playWAVAsync(SOUND_IDLE, true, PlaybackMode::QUEUE);
     }
 
+    void tracks()
+    {
+        playWAVAsync(SOUND_TRACK, true, PlaybackMode::MIX, 192);
+    }
+
     void stopEngine()
     {
         playWAVAsync(SOUND_STOP, false, PlaybackMode::REPLACE);
@@ -279,6 +265,43 @@ namespace Audio
     void playReverseBeep()
     {
         playWAVAsync(SOUND_REVERSE_BEEP, true, PlaybackMode::MIX, 192);
+    }
+
+    bool isPlaying(const char *filename)
+    {
+        for (size_t i = 0; i < activeCount; i++)
+        {
+            if (audioFiles[i].active && strcmp(activeSounds[i].filename, filename) == 0)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void stopTrack(const char *filename)
+    {
+        std::lock_guard<std::mutex> lock(audioMutex);
+
+        for (size_t i = 0; i < activeCount; i++)
+        {
+            if (audioFiles[i].active && strcmp(activeSounds[i].filename, filename) == 0)
+            {
+                audioFiles[i].file.close();
+                audioFiles[i].active = false;
+
+                // Shift remaining active sounds if needed
+                if (i < activeCount - 1)
+                {
+                    memmove(&audioFiles[i], &audioFiles[i + 1],
+                            (activeCount - i - 1) * sizeof(AudioFile));
+                    memmove(&activeSounds[i], &activeSounds[i + 1],
+                            (activeCount - i - 1) * sizeof(AudioCommand));
+                }
+                activeCount--;
+                break;
+            }
+        }
     }
 
 }
