@@ -1,6 +1,7 @@
 #include "lights.h"
 #include "pins.h"
 #include "driver/ledc.h"
+#include <algorithm>
 
 
 namespace Lights {
@@ -25,9 +26,9 @@ namespace Lights {
                 if (currentBrightness[i] != targetBrightness[i]) {
                     int step = (FADE_INTERVAL * 255) / FADE_DURATION;
                     if (currentBrightness[i] < targetBrightness[i]) {
-                        currentBrightness[i] = min(currentBrightness[i] + step, targetBrightness[i]);
+                        currentBrightness[i] = std::min(static_cast<uint8_t>(currentBrightness[i] + step), targetBrightness[i]);
                     } else {
-                        currentBrightness[i] = max(currentBrightness[i] - step, targetBrightness[i]);
+                        currentBrightness[i] = std::max(static_cast<uint8_t>(currentBrightness[i] - step), targetBrightness[i]);
                     }
                     
                     switch(i) {
