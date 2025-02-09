@@ -7,6 +7,9 @@ namespace Motors {
     // PCA9635 instance with all-call address
     static PCA9635 motorDriver(0x00);
 
+    // Add at the top with other static variables
+    static int16_t currentSpeeds[8] = {0}; // Array to store current speeds
+
     // Motor channel definitions
     enum MotorChannel {
         BOOM = 0,      // Motor 1 (channels 0,1)
@@ -20,6 +23,7 @@ namespace Motors {
     };
 
     static void setMotor(MotorChannel motor, int16_t speed) {
+        currentSpeeds[motor/2] = speed; // Store speed before applying it
         uint8_t channelA = motor;
         uint8_t channelB = motor + 1;
         
@@ -86,5 +90,18 @@ namespace Motors {
 
     void setPusher(int16_t speed) {
         setMotor(PUSHER, speed);
+    }
+
+    // Add getter implementations
+    int16_t getBoom() { return currentSpeeds[BOOM/2]; }
+    int16_t getDipper() { return currentSpeeds[DIPPER/2]; }
+    int16_t getBucket() { return currentSpeeds[BUCKET/2]; }
+    int16_t getThumb() { return currentSpeeds[THUMB/2]; }
+    int16_t getRotator() { return currentSpeeds[ROTATOR/2]; }
+    int16_t getLeftTrack() { return currentSpeeds[LEFT_TRACK/2]; }
+    int16_t getRightTrack() { return currentSpeeds[RIGHT_TRACK/2]; }
+    int16_t getPusher() { return currentSpeeds[PUSHER/2]; }
+    bool areTracksMoving() {
+        return getLeftTrack() != 0 || getRightTrack() != 0;
     }
 }
