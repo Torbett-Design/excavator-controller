@@ -209,12 +209,19 @@ namespace Audio
         pendingQueue = xQueueCreate(PENDING_QUEUE_SIZE, sizeof(AudioCommand));
         xTaskCreate(audioTask, "AudioPlayer", AUDIO_TASK_STACK, NULL, 1, &audioTaskHandle);
     }
-    void playWAVAsync(const char *filename, bool loop, PlaybackMode mode, uint8_t volume)
+    void playWAVAsync(const char* filename, bool loop, PlaybackMode mode, uint8_t volume)
     {
+        // Check if sound is already playing
+        for (size_t i = 0; i < activeCount; i++) {
+            if (audioFiles[i].active && strcmp(activeSounds[i].filename, filename) == 0) {
+                return; // Exit without playing if sound already exists
+            }
+        }
+    
+        // If we get here, sound isn't playing so proceed with normal play logic
         AudioCommand cmd = {filename, loop, mode, volume};
         xQueueSend(audioQueue, &cmd, portMAX_DELAY);
     }
-
     void stopAudio()
     {
         audioStopRequest = true;
