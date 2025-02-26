@@ -21,6 +21,18 @@ namespace Lights {
     const unsigned long FADE_INTERVAL = 20; // Update every 20ms (50Hz)
     
     static void lightTask(void* parameter) {
+        // Initialize PWM channels
+        ledcSetup(CAB_LIGHT_CHANNEL, PWM_FREQUENCY, PWM_RESOLUTION);
+        ledcSetup(BOOM_LIGHT_CHANNEL, PWM_FREQUENCY, PWM_RESOLUTION);
+        ledcSetup(AUX_LIGHT_CHANNEL, PWM_FREQUENCY, PWM_RESOLUTION);
+        
+        // Attach PWM channels to pins
+        ledcAttachPin(Pins::CAB_LED, CAB_LIGHT_CHANNEL);
+        ledcAttachPin(Pins::BOOM_LED, BOOM_LIGHT_CHANNEL);
+        ledcAttachPin(Pins::AUX_LED, AUX_LIGHT_CHANNEL);
+        
+        
+        
         while(true) {
             for (int i = 0; i < 3; i++) {
                 if (currentBrightness[i] != targetBrightness[i]) {
@@ -75,5 +87,17 @@ namespace Lights {
         setCabLight(0);
         setBoomLight(0);
         setAuxLight(0);
+    }
+
+    bool isCabLightOn() {
+        return currentBrightness[0] > 0;
+    }
+
+    bool isBoomLightOn() {
+        return currentBrightness[1] > 0;
+    }
+
+    bool isAuxLightOn() {
+        return currentBrightness[2] > 0;
     }
 }

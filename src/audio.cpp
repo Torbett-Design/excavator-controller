@@ -8,7 +8,7 @@
 namespace Audio
 {
 // Audio configuration
-#define I2S_SAMPLE_RATE 44100
+#define I2S_SAMPLE_RATE 22050
 #define I2S_CHANNEL_NUM 1
 #define I2S_BITS_PER_SAMPLE 16
 #define DMA_BUF_COUNT 8
@@ -220,6 +220,7 @@ namespace Audio
     
         // If we get here, sound isn't playing so proceed with normal play logic
         AudioCommand cmd = {filename, loop, mode, volume};
+        Serial.println("Playing audio: " + String(filename));
         xQueueSend(audioQueue, &cmd, portMAX_DELAY);
     }
     void stopAudio()

@@ -90,6 +90,10 @@ void startTask() {
             }
         }
     }
+
+    bool isEnabled() {
+        return beaconEnabled;
+    }
 }
 
 

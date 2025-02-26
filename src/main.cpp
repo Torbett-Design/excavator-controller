@@ -6,7 +6,7 @@
 #include "motors.h"
 #include "pins.h"
 
-#define PS3_CONTROLLER_MAC "01:02:03:04:05:06"
+// #define PS3_CONTROLLER_MAC "01:02:03:04:05:06"
 
 enum class State
 {
@@ -29,6 +29,10 @@ bool tracksWereMoving = false;
 
 static unsigned long lastActivityTime = 0;
 const unsigned long IDLE_TIMEOUT = 3000; // 3 seconds
+
+unsigned long lastDebugPrintTime = 0;
+const unsigned long DEBUG_PRINT_INTERVAL = 1000; // 1 second
+
 void ps3_notify()
 {
     if (state != State::OFF)
@@ -38,19 +42,26 @@ void ps3_notify()
         {
             Motors::setLeftTrack(Ps3.data.analog.button.l2);
         }
+        else if (Ps3.data.analog.button.l1)
+        {
+            Motors::setLeftTrack(-Ps3.data.analog.button.l1);
+        }
+        else
+        {
+            Motors::setLeftTrack(0);
+        }
+
         if (Ps3.data.analog.button.r2)
         {
             Motors::setRightTrack(Ps3.data.analog.button.r2);
         }
-        
-        // Reverse movement using L1/R1 analog values (0-255)
-        if (Ps3.data.analog.button.l1)
-        {
-            Motors::setLeftTrack(-Ps3.data.analog.button.l1);
-        }
-        if (Ps3.data.analog.button.r1)
+        else if (Ps3.data.analog.button.r1)
         {
             Motors::setRightTrack(-Ps3.data.analog.button.r1);
+        }
+        else
+        {
+            Motors::setRightTrack(0);
         }
     }
 
@@ -73,7 +84,9 @@ void ps3_notify()
 void setupController()
 {
     Ps3.attach(ps3_notify);
-    Ps3.begin(PS3_CONTROLLER_MAC);
+    Ps3.begin();
+    String mac = Ps3.getAddress();
+    Serial.println("MAC address: " + mac);
 }
 
 void setupPins()
@@ -102,15 +115,24 @@ void handleShutdown()
     Motors::setPusher(0);
 
     Lights::setBoomLight(false);
-    delay(1000);
+    vTaskDelay(100);
     Lights::setCabLight(false);
-    delay(1000);
+    vTaskDelay(100);
 
-    Audio::enginePowerDown();
     Audio::stopEngine();
     Beacon::setEnabled(false);
 
     state = State::OFF;
+}
+
+float getBatteryVoltage()
+{
+    digitalWrite(Pins::VBATT_ADC_EN, HIGH);
+    vTaskDelay(10);
+    int adcValue = analogRead(Pins::VBATT_ADC);
+    digitalWrite(Pins::VBATT_ADC_EN, LOW);
+
+    return (float)((adcValue / 4095.0) * 3300 * 2.625) / 1000.0; // Return in volts
 }
 
 void setup()
@@ -127,6 +149,12 @@ void setup()
 void loop()
 {
 
+
+    bool hydraulicActive = Motors::getBoom() != 0 || Motors::getDipper() != 0 ||
+    Motors::getBucket() != 0 || Motors::getThumb() != 0 ||
+    Motors::getRotator() != 0;
+    bool tracksMoving = Motors::areTracksMoving();
+
     // State machine handling
     switch (state)
     {
@@ -140,42 +168,22 @@ void loop()
         break;
 
     case State::IDLE:
-    case State::POWER:
-    case State::REVERSE:
+
+    // Start appropriate sounds when activity begins
+        if ((tracksMoving || hydraulicActive))
+        {
+            Audio::enginePowerUp();
+            state = State::MOVING;
+        }
+
         if (startButtonPressed && (millis() - startButtonTime >= 2000))
         {
             handleShutdown();
         }
         break;
 
-    case State::POWER_UP:
-        if (!Audio::isPlaying(Audio::SOUND_POWERUP))
-        {
-            if (isMoving)
-            {
-                state = State::MOVING;
-            }
-            else
-            {
-                state = State::HYDRAULIC;
-            }
-            Audio::engineHydraulic();
-        }
-        break;
 
     case State::MOVING:
-    case State::HYDRAULIC:
-        bool hydraulicActive = Motors::getBoom() != 0 || Motors::getDipper() != 0 ||
-                               Motors::getBucket() != 0 || Motors::getThumb() != 0 ||
-                               Motors::getRotator() != 0;
-        bool tracksMoving = Motors::areTracksMoving();
-
-        // Start appropriate sounds when activity begins
-        if ((tracksMoving || hydraulicActive) && state == State::IDLE)
-        {
-            Audio::enginePowerUp();
-            state = State::POWER_UP;
-        }
 
         // Manage ongoing sounds based on activity
         if (tracksMoving)
@@ -217,4 +225,93 @@ void loop()
         break;
     }
     // Rest of control loop code
+
+    // Debug printing once per second
+    unsigned long currentMillis = millis();
+    if (currentMillis - lastDebugPrintTime >= DEBUG_PRINT_INTERVAL)
+    {
+        lastDebugPrintTime = currentMillis;
+
+        // State information
+        Serial.println("==== EXCAVATOR DEBUG INFO ====");
+
+        // State
+        Serial.print("System State: ");
+        switch (state)
+        {
+        case State::OFF:
+            Serial.println("OFF");
+            break;
+        case State::IDLE:
+            Serial.println("IDLE");
+            break;
+        case State::POWER_UP:
+            Serial.println("POWER_UP");
+            break;
+        case State::POWER:
+            Serial.println("POWER");
+            break;
+        case State::HYDRAULIC:
+            Serial.println("HYDRAULIC");
+            break;
+        case State::POWER_DOWN:
+            Serial.println("POWER_DOWN");
+            break;
+        case State::MOVING:
+            Serial.println("MOVING");
+            break;
+        case State::REVERSE:
+            Serial.println("REVERSE");
+            break;
+        default:
+            Serial.println("UNKNOWN");
+        }
+
+        // Battery
+        float batteryVoltage = getBatteryVoltage();
+        Serial.print("Battery: ");
+        Serial.print(batteryVoltage, 2);
+        Serial.println("V");
+
+        // Charger status
+        bool chargerActive = !digitalRead(Pins::BATT_STAT); // Low = charging
+        Serial.print("Charger: ");
+        Serial.println(chargerActive ? "CHARGING" : "NOT CHARGING");
+
+        // Motor status
+        Serial.print("Motors: Boom=");
+        Serial.print(Motors::getBoom());
+        Serial.print(" Dipper=");
+        Serial.print(Motors::getDipper());
+        Serial.print(" Bucket=");
+        Serial.print(Motors::getBucket());
+        Serial.print(" Thumb=");
+        Serial.print(Motors::getThumb());
+        Serial.print(" Rot=");
+        Serial.println(Motors::getRotator());
+
+        // Tracks
+        Serial.print("Tracks: L=");
+        Serial.print(Motors::getLeftTrack());
+        Serial.print(" R=");
+        Serial.print(Motors::getRightTrack());
+        Serial.print(" Moving=");
+        Serial.println(Motors::areTracksMoving() ? "YES" : "NO");
+
+        // Beacon & Lights
+        Serial.print("Beacon: ");
+        Serial.print(Beacon::isEnabled() ? "ON" : "OFF");
+        Serial.print(" Cab Light: ");
+        Serial.print(Lights::isCabLightOn() ? "ON" : "OFF");
+        Serial.print(" Boom Light: ");
+        Serial.println(Lights::isBoomLightOn() ? "ON" : "OFF");
+
+        // Uptime
+        Serial.print("Uptime: ");
+        Serial.print(currentMillis / 1000);
+        Serial.println(" seconds");
+
+        Serial.println("=============================");
+    }
+    vTaskDelay(10);
 }

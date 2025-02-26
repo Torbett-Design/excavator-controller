@@ -10,4 +10,7 @@ namespace Lights {
     void setAuxLight(uint8_t brightness);
     void allLightsOn(uint8_t brightness = 255);
     void allLightsOff();
+    bool isCabLightOn();
+    bool isBoomLightOn();
+    bool isAuxLightOn();
 }

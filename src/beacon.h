@@ -5,7 +5,9 @@
 namespace Beacon {
     void setup();
     void setEnabled(bool enabled);
-    void update();
     void setLowBatteryMode(bool enabled);
-    void startTask();
+    void update();
+    
+    // New function to get beacon state
+    bool isEnabled();
 }
