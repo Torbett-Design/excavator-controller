@@ -26,27 +26,34 @@ namespace Motors {
         currentSpeeds[motor/2] = speed; // Store speed before applying it
         uint8_t channelA = motor;
         uint8_t channelB = motor + 1;
-        
+        uint8_t err = 0;
         speed = constrain(speed, -255, 255);
         
         if (speed == 0) {
-            motorDriver.write1(channelA, 0);
-            motorDriver.write1(channelB, 0);
+            err = motorDriver.write1(channelA, 0);
+            err = motorDriver.write1(channelB, 0);
         }
         else if (speed > 0) {
-            motorDriver.write1(channelA, 0);
-            motorDriver.write1(channelB, speed);
+            err = motorDriver.write1(channelA, 0);
+            err = motorDriver.write1(channelB, speed);
         }
         else {
-            motorDriver.write1(channelA, -speed);
-            motorDriver.write1(channelB, 0);
+            err = motorDriver.write1(channelA, -speed);
+            err = motorDriver.write1(channelB, 0);
+        }
+        if (err) {
+            Serial.print("Error setting motor ");
+            Serial.print(motor);
+            Serial.print(": ");
+            Serial.println(err);
         }
     }
 
     void setup() {
         Wire.begin(Pins::I2C_SDA, Pins::I2C_SCL);
         
-        motorDriver.begin(0x00);
+        if (motorDriver.begin(0x00))
+        {
         motorDriver.setMode1(0);
         motorDriver.setMode2(0x04);  // Enable output change on ACK
 
@@ -58,6 +65,15 @@ namespace Motors {
         // Enable motors
         pinMode(Pins::MOTORS_EN, OUTPUT);
         digitalWrite(Pins::MOTORS_EN, HIGH);
+    } else {
+        
+        while(1)
+        {
+            Serial.println("Failed to initialize PCA9635");
+            vTaskDelay(1000);
+        };
+
+    }
     }
 
     void setBoom(int16_t speed) {

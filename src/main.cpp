@@ -63,6 +63,16 @@ void ps3_notify()
         {
             Motors::setRightTrack(0);
         }
+        
+        // Use left analog stick for excavator rotation
+        int8_t rotationValue = Ps3.data.analog.stick.lx;
+        // Apply deadzone to prevent small unintended movements
+        if (abs(rotationValue) < 15) {
+            rotationValue = 0;
+        }
+        // Map from -128~127 range to -255~255 range
+        int16_t mappedRotation = map(rotationValue, -128, 127, -255, 255);
+        Motors::setRotator(mappedRotation);
     }
 
     // Handle start button state
@@ -80,7 +90,6 @@ void ps3_notify()
         startButtonTime = 0;
     }
 }
-
 void setupController()
 {
     Ps3.attach(ps3_notify);
@@ -105,6 +114,8 @@ void setupPins()
 
 void handleShutdown()
 {
+    Audio::stopEngine();
+
     Motors::setBoom(0);
     Motors::setDipper(0);
     Motors::setBucket(0);
@@ -119,10 +130,9 @@ void handleShutdown()
     Lights::setCabLight(false);
     vTaskDelay(100);
 
-    Audio::stopEngine();
+
     Beacon::setEnabled(false);
 
-    state = State::OFF;
 }
 
 float getBatteryVoltage()
@@ -172,13 +182,15 @@ void loop()
     // Start appropriate sounds when activity begins
         if ((tracksMoving || hydraulicActive))
         {
-            Audio::enginePowerUp();
+            //Audio::enginePowerUp();
             state = State::MOVING;
         }
 
         if (startButtonPressed && (millis() - startButtonTime >= 2000))
         {
+            Serial.println("Shutting Down");
             handleShutdown();
+            state = State::OFF;
         }
         break;
 
@@ -188,16 +200,16 @@ void loop()
         // Manage ongoing sounds based on activity
         if (tracksMoving)
         {
-            Audio::tracks();
+            //Audio::tracks();
         }
         else
         {
-            Audio::stopTrack(Audio::SOUND_TRACK);
+            //Audio::stopTrack(Audio::SOUND_TRACK);
         }
 
         if (hydraulicActive)
         {
-            Audio::engineHydraulic();
+            //Audio::engineHydraulic();
         }
         else
         {
@@ -213,7 +225,7 @@ void loop()
             }
             else if (millis() - lastActivityTime >= IDLE_TIMEOUT)
             {
-                Audio::enginePowerDown();
+                //Audio::enginePowerDown();
                 state = State::IDLE;
                 lastActivityTime = 0;
             }
@@ -226,92 +238,104 @@ void loop()
     }
     // Rest of control loop code
 
-    // Debug printing once per second
-    unsigned long currentMillis = millis();
-    if (currentMillis - lastDebugPrintTime >= DEBUG_PRINT_INTERVAL)
-    {
-        lastDebugPrintTime = currentMillis;
-
-        // State information
-        Serial.println("==== EXCAVATOR DEBUG INFO ====");
-
-        // State
-        Serial.print("System State: ");
-        switch (state)
+        // Debug printing once per second
+        unsigned long currentMillis = millis();
+        if (currentMillis - lastDebugPrintTime >= DEBUG_PRINT_INTERVAL)
         {
-        case State::OFF:
-            Serial.println("OFF");
-            break;
-        case State::IDLE:
-            Serial.println("IDLE");
-            break;
-        case State::POWER_UP:
-            Serial.println("POWER_UP");
-            break;
-        case State::POWER:
-            Serial.println("POWER");
-            break;
-        case State::HYDRAULIC:
-            Serial.println("HYDRAULIC");
-            break;
-        case State::POWER_DOWN:
-            Serial.println("POWER_DOWN");
-            break;
-        case State::MOVING:
-            Serial.println("MOVING");
-            break;
-        case State::REVERSE:
-            Serial.println("REVERSE");
-            break;
-        default:
-            Serial.println("UNKNOWN");
+            lastDebugPrintTime = currentMillis;
+
+            // State information
+            Serial.println("==== EXCAVATOR DEBUG INFO ====");
+
+            // State
+            Serial.print("System State: ");
+            switch (state)
+            {
+            case State::OFF:
+                Serial.println("OFF");
+                break;
+            case State::IDLE:
+                Serial.println("IDLE");
+                break;
+            case State::POWER_UP:
+                Serial.println("POWER_UP");
+                break;
+            case State::POWER:
+                Serial.println("POWER");
+                break;
+            case State::HYDRAULIC:
+                Serial.println("HYDRAULIC");
+                break;
+            case State::POWER_DOWN:
+                Serial.println("POWER_DOWN");
+                break;
+            case State::MOVING:
+                Serial.println("MOVING");
+                break;
+            case State::REVERSE:
+                Serial.println("REVERSE");
+                break;
+            default:
+                Serial.println("UNKNOWN");
+            }
+
+            // Battery
+            float batteryVoltage = getBatteryVoltage();
+            Serial.print("Battery: ");
+            Serial.print(batteryVoltage, 2);
+            Serial.println("V");
+
+            // Charger status
+            bool chargerActive = !digitalRead(Pins::BATT_STAT); // Low = charging
+            Serial.print("Charger: ");
+            Serial.println(chargerActive ? "CHARGING" : "NOT CHARGING");
+
+            // Motor status
+            Serial.print("Motors: Boom=");
+            Serial.print(Motors::getBoom());
+            Serial.print(" Dipper=");
+            Serial.print(Motors::getDipper());
+            Serial.print(" Bucket=");
+            Serial.print(Motors::getBucket());
+            Serial.print(" Thumb=");
+            Serial.print(Motors::getThumb());
+            Serial.print(" Rot=");
+            Serial.println(Motors::getRotator());
+        
+            // Add a dedicated rotation status line
+            Serial.print("Rotation: ");
+            int16_t rotationValue = Motors::getRotator();
+            Serial.print(rotationValue);
+            if (rotationValue > 50) {
+                Serial.println(" (Rotating RIGHT)");
+            } else if (rotationValue < -50) {
+                Serial.println(" (Rotating LEFT)");
+            } else {
+                Serial.println(" (Stopped)");
+            }
+
+            // Tracks
+            Serial.print("Tracks: L=");
+            Serial.print(Motors::getLeftTrack());
+            Serial.print(" R=");
+            Serial.print(Motors::getRightTrack());
+            Serial.print(" Moving=");
+            Serial.println(Motors::areTracksMoving() ? "YES" : "NO");
+
+            // Beacon & Lights
+            Serial.print("Beacon: ");
+            Serial.print(Beacon::isEnabled() ? "ON" : "OFF");
+            Serial.print(" Cab Light: ");
+            Serial.print(Lights::isCabLightOn() ? "ON" : "OFF");
+            Serial.print(" Boom Light: ");
+            Serial.println(Lights::isBoomLightOn() ? "ON" : "OFF");
+
+            // Uptime
+            Serial.print("Uptime: ");
+            Serial.print(currentMillis / 1000);
+            Serial.println(" seconds");
+
+            Serial.println("=============================");
         }
-
-        // Battery
-        float batteryVoltage = getBatteryVoltage();
-        Serial.print("Battery: ");
-        Serial.print(batteryVoltage, 2);
-        Serial.println("V");
-
-        // Charger status
-        bool chargerActive = !digitalRead(Pins::BATT_STAT); // Low = charging
-        Serial.print("Charger: ");
-        Serial.println(chargerActive ? "CHARGING" : "NOT CHARGING");
-
-        // Motor status
-        Serial.print("Motors: Boom=");
-        Serial.print(Motors::getBoom());
-        Serial.print(" Dipper=");
-        Serial.print(Motors::getDipper());
-        Serial.print(" Bucket=");
-        Serial.print(Motors::getBucket());
-        Serial.print(" Thumb=");
-        Serial.print(Motors::getThumb());
-        Serial.print(" Rot=");
-        Serial.println(Motors::getRotator());
-
-        // Tracks
-        Serial.print("Tracks: L=");
-        Serial.print(Motors::getLeftTrack());
-        Serial.print(" R=");
-        Serial.print(Motors::getRightTrack());
-        Serial.print(" Moving=");
-        Serial.println(Motors::areTracksMoving() ? "YES" : "NO");
-
-        // Beacon & Lights
-        Serial.print("Beacon: ");
-        Serial.print(Beacon::isEnabled() ? "ON" : "OFF");
-        Serial.print(" Cab Light: ");
-        Serial.print(Lights::isCabLightOn() ? "ON" : "OFF");
-        Serial.print(" Boom Light: ");
-        Serial.println(Lights::isBoomLightOn() ? "ON" : "OFF");
-
-        // Uptime
-        Serial.print("Uptime: ");
-        Serial.print(currentMillis / 1000);
-        Serial.println(" seconds");
-
-        Serial.println("=============================");
-    }
     vTaskDelay(10);
 }
