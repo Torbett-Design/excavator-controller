@@ -64,15 +64,71 @@ void ps3_notify()
             Motors::setRightTrack(0);
         }
         
-        // Use left analog stick for excavator rotation
-        int8_t rotationValue = Ps3.data.analog.stick.lx;
-        // Apply deadzone to prevent small unintended movements
-        if (abs(rotationValue) < 15) {
-            rotationValue = 0;
+        // Rotator control with left stick X-axis
+        if (Ps3.data.analog.stick.lx)
+        {
+            // Use left analog stick for excavator rotation
+            int8_t rotationValue = Ps3.data.analog.stick.lx;
+            // Apply deadzone to prevent small unintended movements
+            if (abs(rotationValue) < 15) {
+                rotationValue = 0;
+            }
+            // Map from -128~127 range to -255~255 range
+            int16_t mappedRotation = map(rotationValue, -128, 127, -255, 255);
+            Motors::setRotator(mappedRotation);
         }
-        // Map from -128~127 range to -255~255 range
-        int16_t mappedRotation = map(rotationValue, -128, 127, -255, 255);
-        Motors::setRotator(mappedRotation);
+        else {
+            Motors::setRotator(0);
+        }
+        
+        // NEW CONTROLS:
+        // Dipper control with left stick Y-axis (up moves away, down moves towards)
+        if (Ps3.data.analog.stick.ly)
+        {
+            int8_t dipperValue = -Ps3.data.analog.stick.ly; // Invert because stick is negative when pushed up
+            // Apply deadzone
+            if (abs(dipperValue) < 15) {
+                dipperValue = 0;
+            }
+            // Map from -128~127 range to -255~255 range
+            int16_t mappedDipper = map(dipperValue, -128, 127, -255, 255);
+            Motors::setDipper(mappedDipper);
+        }
+        else {
+            Motors::setDipper(0);
+        }
+        
+        // Boom control with right stick Y-axis (up lowers, down raises)
+        if (Ps3.data.analog.stick.ry)
+        {
+            int8_t boomValue = -Ps3.data.analog.stick.ry; // Invert because stick is negative when pushed up
+            // Apply deadzone
+            if (abs(boomValue) < 15) {
+                boomValue = 0;
+            }
+            // Map from -128~127 range to -255~255 range
+            int16_t mappedBoom = map(boomValue, -128, 127, -255, 255);
+            Motors::setBoom(mappedBoom);
+        }
+        else {
+            Motors::setBoom(0);
+        }
+        
+        // Bucket control with right stick X-axis (left curls in, right curls out)
+        if (Ps3.data.analog.stick.rx)
+        {
+            int8_t bucketValue = Ps3.data.analog.stick.rx;
+            // Apply deadzone
+            if (abs(bucketValue) < 15) {
+                bucketValue = 0;
+            }
+            // Map from -128~127 range to -255~255 range
+            int16_t mappedBucket = map(bucketValue, -128, 127, -255, 255);
+            Motors::setBucket(mappedBucket);
+        }
+        else {
+            Motors::setBucket(0);
+        }
     }
 
     // Handle start button state
@@ -89,8 +145,7 @@ void ps3_notify()
         startButtonPressed = false;
         startButtonTime = 0;
     }
-}
-void setupController()
+}void setupController()
 {
     Ps3.attach(ps3_notify);
     Ps3.begin();

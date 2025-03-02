@@ -14,12 +14,12 @@ namespace Motors {
     enum MotorChannel {
         BOOM = 0,      // Motor 1 (channels 0,1)
         DIPPER = 2,    // Motor 2 (channels 2,3)
-        BUCKET = 4,    // Motor 3 (channels 4,5)
-        THUMB = 6,     // Motor 4 (channels 6,7)
-        ROTATOR = 8,   // Motor 5 (channels 8,9)
-        LEFT_TRACK = 10,  // Motor 6 (channels 10,11)
-        RIGHT_TRACK = 12, // Motor 7 (channels 12,13)
-        PUSHER = 14    // Motor 8 (channels 14,15)
+        BUCKET = 10,    // Motor 3 (channels 4,5)
+        THUMB = 12,     // Motor 4 (channels 6,7)
+        ROTATOR = 6,   // Motor 5 (channels 8,9)
+        LEFT_TRACK = 8,  // Motor 6 (channels 10,11)
+        RIGHT_TRACK = 14, // Motor 7 (channels 12,13)
+        PUSHER = 4    // Motor 8 (channels 14,15)
     };
 
     static void setMotor(MotorChannel motor, int16_t speed) {
@@ -35,10 +35,10 @@ namespace Motors {
         }
         else if (speed > 0) {
             err = motorDriver.write1(channelA, 0);
-            err = motorDriver.write1(channelB, speed);
+            err = motorDriver.write1(channelB, (uint8_t)speed);
         }
         else {
-            err = motorDriver.write1(channelA, -speed);
+            err = motorDriver.write1(channelA, (uint8_t)0-speed);
             err = motorDriver.write1(channelB, 0);
         }
         if (err) {
@@ -52,13 +52,15 @@ namespace Motors {
     void setup() {
         Wire.begin(Pins::I2C_SDA, Pins::I2C_SCL);
         
-        if (motorDriver.begin(0x00))
+        if (motorDriver.begin(0,0x04))
         {
-        motorDriver.setMode1(0);
-        motorDriver.setMode2(0x04);  // Enable output change on ACK
+
+               
 
         // Initialize all motor channels to OFF
         for (int i = 0; i < 16; i++) {
+            motorDriver.setLedDriverMode(i,PCA9635_LEDPWM);
+            
             motorDriver.write1(i, 0);
         }
 
