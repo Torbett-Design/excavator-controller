@@ -74,7 +74,7 @@ void ps3_notify()
                 rotationValue = 0;
             }
             // Map from -128~127 range to -255~255 range
-            int16_t mappedRotation = map(rotationValue, -128, 127, -255, 255);
+            int16_t mappedRotation = rotationValue * 2;
             Motors::setRotator(mappedRotation);
         }
         else {
@@ -85,13 +85,14 @@ void ps3_notify()
         // Dipper control with left stick Y-axis (up moves away, down moves towards)
         if (Ps3.data.analog.stick.ly)
         {
-            int8_t dipperValue = -Ps3.data.analog.stick.ly; // Invert because stick is negative when pushed up
+            int8_t dipperValue = Ps3.data.analog.stick.ly; // Invert because stick is negative when pushed up
             // Apply deadzone
             if (abs(dipperValue) < 15) {
                 dipperValue = 0;
             }
             // Map from -128~127 range to -255~255 range
-            int16_t mappedDipper = map(dipperValue, -128, 127, -255, 255);
+            int16_t mappedDipper = dipperValue * -2;
+           // Serial.printf("Dipper input = %d\r\n", dipperValue);
             Motors::setDipper(mappedDipper);
         }
         else {
@@ -101,13 +102,13 @@ void ps3_notify()
         // Boom control with right stick Y-axis (up lowers, down raises)
         if (Ps3.data.analog.stick.ry)
         {
-            int8_t boomValue = -Ps3.data.analog.stick.ry; // Invert because stick is negative when pushed up
+            int8_t boomValue = Ps3.data.analog.stick.ry; // Invert because stick is negative when pushed up
             // Apply deadzone
             if (abs(boomValue) < 15) {
                 boomValue = 0;
             }
             // Map from -128~127 range to -255~255 range
-            int16_t mappedBoom = map(boomValue, -128, 127, -255, 255);
+            int16_t mappedBoom = boomValue * -2;
             Motors::setBoom(mappedBoom);
         }
         else {
@@ -123,7 +124,7 @@ void ps3_notify()
                 bucketValue = 0;
             }
             // Map from -128~127 range to -255~255 range
-            int16_t mappedBucket = map(bucketValue, -128, 127, -255, 255);
+            int16_t mappedBucket = bucketValue * 2;
             Motors::setBucket(mappedBucket);
         }
         else {

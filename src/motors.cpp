@@ -16,10 +16,10 @@ namespace Motors {
         DIPPER = 2,    // Motor 2 (channels 2,3)
         BUCKET = 10,    // Motor 3 (channels 4,5)
         THUMB = 12,     // Motor 4 (channels 6,7)
-        ROTATOR = 6,   // Motor 5 (channels 8,9)
+        ROTATOR = 4,   // Motor 5 (channels 8,9)
         LEFT_TRACK = 8,  // Motor 6 (channels 10,11)
         RIGHT_TRACK = 14, // Motor 7 (channels 12,13)
-        PUSHER = 4    // Motor 8 (channels 14,15)
+        PUSHER = 6    // Motor 8 (channels 14,15)
     };
 
     static void setMotor(MotorChannel motor, int16_t speed) {
@@ -27,7 +27,7 @@ namespace Motors {
         uint8_t channelA = motor;
         uint8_t channelB = motor + 1;
         uint8_t err = 0;
-        speed = constrain(speed, -255, 255);
+        speed = constrain(speed, -200, 200);
         
         if (speed == 0) {
             err = motorDriver.write1(channelA, 0);
